@@ -20,9 +20,11 @@
   import About from '@/components/common/About'
   import UpdateCard from './UpdateCard'
   import SideMenu from './SideMenu'
+  import QuickNav from './QuickNav.vue';
+
   export default {
     name: 'AppIndex',
-    components: {Carousel, Slogan, About, UpdateCard, SideMenu}
+    components: {Carousel, Slogan, About, UpdateCard, SideMenu, QuickNav}
   }
 </script>
 

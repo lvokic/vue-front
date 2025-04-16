@@ -54,7 +54,9 @@
               var data = resp.data.result
               _this.$store.commit('login', data)
               const path = this.$route.query.redirect || '/admin/dashboard';
-              this.redirectTo(path);  // 调用封装好的跳转函数
+              if (this.$route.path !== path) {
+                this.redirectTo(path);  // 调用封装好的跳转函数
+              }
             } else {
               this.$alert(resp.data.message, '提示', {
                 confirmButtonText: '确定'

@@ -130,7 +130,14 @@ axios.defaults.baseURL = 'http://localhost:8443/api'
 // 使请求带上凭证信息
 axios.defaults.withCredentials = true
 
+// 创建一个新的 axios 实例，面向 Flask 后端
+var flaskAxios = axios.create({
+  baseURL: 'http://127.0.0.1:5000/api',  // Flask 后端 API 地址
+  withCredentials: true,  // 请求带上凭证信息
+});
+
 Vue.prototype.$axios = axios
+Vue.prototype.$flaskAxios = flaskAxios;
 Vue.config.productionTip = false
 Vue.use(mavonEditor)
 
