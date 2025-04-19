@@ -1,9 +1,5 @@
 <template>
   <el-container>
-    <el-aside style="width: 200px;margin-top: 20px">
-      <switch></switch>
-      <SideMenu @indexSelect="listByCategory" ref="sideMenu"></SideMenu>
-    </el-aside>
     <el-main>
       <books class="books-area" ref="booksArea"></books>
     </el-main>
@@ -11,12 +7,11 @@
 </template>
 
 <script>
-  import SideMenu from './SideMenu'
   import Books from './Books'
 
   export default {
     name: 'AppLibrary',
-    components: {Books, SideMenu},
+    components: {Books},
     methods: {
       listByCategory () {
         var _this = this

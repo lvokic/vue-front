@@ -1,6 +1,6 @@
 <template>
   <div class="homework">
-    <el-row class="nav-row" gutter="20">
+    <el-row class="nav-row" :gutter="20">
       <!-- 左侧分类导航栏 -->
       <el-col :span="6">
         <el-menu default-active="1" class="el-menu-vertical-demo" @select="handleCategoryChange"
@@ -60,7 +60,7 @@ export default {
   name: "Article",
   data() {
     return {
-      activeCategory: "客观题", // 默认选中的类别
+      category: "客观题", // 默认选中的类别
       homeworkList: [],
       selectedFile: null, // 用于保存用户选择的文件
       selectedHomework: null, // 用于保存当前选择的作业名称
@@ -122,6 +122,9 @@ export default {
         this.$message.error("请上传一个 .txt 文件");
         this.selectedFile = null; // 清空文件选择
       }
+
+      // 手动重置文件选择框
+      event.target.value = null;
     },
 
     // 更新成绩
@@ -140,7 +143,7 @@ export default {
     // 提交作业
     submitHomework() {
       if (!this.selectedFile) {
-        this.$message.error("请先选择一个作业文件");
+        this.$message.error("请先选择一个作业文件");''
         return;
       }
       if (!this.formData.studentId) {
@@ -149,6 +152,7 @@ export default {
       }
       this.loading = true; // 显示提交按钮的加载状态
       this.studentId = this.formData.studentId;
+      this.$store.dispatch('setStudentId', this.studentId);
       // 创建 FormData 对象
       const formData = new FormData();
       formData.append("file", this.selectedFile); // 将文件附加到 FormData 中
@@ -156,14 +160,13 @@ export default {
       formData.append("homeworkID", Number(this.selectedHomework.id))
       formData.append("studentId", Number(this.formData.studentId)); // 附加学号
       var path;
-      if (this.activeCategory === "客观题") {
+      if (this.category === "客观题") {
         path = "/upload/submit/objective";
-      } else if (this.activeCategory === "主观") {
+      } else if (this.category === "半开放") {
         path = "/upload/submit/subjective";
       } else {
-        path = "/upload/submit/semi-open"; // 半开放类型
+        path = "/upload/submit/open"; // 半开放类型
       }
-      console.log("Request path:", path);
 
       // 使用 axios 提交请求
       this.$flaskAxios
@@ -185,13 +188,15 @@ export default {
     resetForm() {
       this.selectedFile = null;
       this.formData.studentId = "";
+      // 重置文件选择框
+      this.$refs.fileInput.value = null;
     },
   },
 
   // 在组件加载时获取作业数据
   mounted() {
-    this.fetchHomework(this.activeCategory);
-  },
+    this.fetchHomework(this.category);
+  }
 };
 </script>
 

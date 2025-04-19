@@ -1,137 +1,80 @@
 <template>
-  <div>
-    <el-row style="height: 840px;">
-      <search-bar @onSearch="searchResult" ref="searchBar"></search-bar>
-      <view-switch class="switch"></view-switch>
-      <el-tooltip effect="dark" placement="right"
-                  v-for="item in books.slice((currentPage-1)*pagesize,currentPage*pagesize)"
-                  :key="item.id">
-        <p slot="content" style="font-size: 14px;margin-bottom: 6px;">{{item.title}}</p>
-        <p slot="content" style="font-size: 13px;margin-bottom: 6px">
-          <span>{{item.author}}</span> /
-          <span>{{item.date}}</span> /
-          <span>{{item.press}}</span>
-        </p>
-        <p slot="content" style="width: 300px" class="abstract">{{item.abs}}</p>
-        <el-card style="width: 135px;margin-bottom: 20px;height: 233px;float: left;margin-right: 15px" class="book"
-                 bodyStyle="padding:10px" shadow="hover">
-          <div class="cover">
-            <img :src="item.cover" alt="封面">
-          </div>
-          <div class="info">
-            <div class="title">
-              <a href="">{{item.title}}</a>
-            </div>
-          </div>
-          <div class="author">{{item.author}}</div>
-        </el-card>
-      </el-tooltip>
-    </el-row>
-    <el-row>
-      <el-pagination
-        @current-change="handleCurrentChange"
-        :current-page="currentPage"
-        :page-size="pagesize"
-        :total="books.length">
-      </el-pagination>
-    </el-row>
-  </div>
+  <el-container>
+    <el-header>
+      <h2>作业成绩查询</h2>
+    </el-header>
+    <el-main>
+      <el-table :data="grades" style="width: 100%" v-if="grades.length > 0">
+        <el-table-column prop="homeworkName" label="作业名称"></el-table-column>
+        <el-table-column prop="score" label="得分" width="100"></el-table-column>
+        <el-table-column prop="category" label="类型"></el-table-column>
+        <el-table-column prop="completed" label="是否完成" width="120">
+          <template slot-scope="scope">
+            <el-tag :type="scope.row.completed ? 'success' : 'danger'">{{ scope.row.completed ? '已完成' : '未完成' }}</el-tag>
+          </template>
+        </el-table-column>
+        <el-table-column prop="description" label="评价">
+          <template slot-scope="scope">
+            <el-tooltip class="item" effect="dark" :content="scope.row.description" placement="top">
+              <span>{{ scope.row.description }}</span>
+            </el-tooltip>
+          </template>
+        </el-table-column>
+      </el-table>
+      <el-alert v-else type="warning" title="没有找到成绩记录" show-icon></el-alert>
+    </el-main>
+  </el-container>
 </template>
 
 <script>
-  import SearchBar from './SearchBar'
-  import ViewSwitch from './ViewSwitch'
+export default {
+  data() {
+    return {
+      studentId: '',  // 存储学生学号
+      grades: [] // 存储成绩数据
+    };
+  },
+  mounted() {
+    // 在组件挂载后，从 Vuex 获取 studentId，并自动查询成绩
+    this.studentId = this.$store.getters.getStudentId;
+    console.log(this.studentId);
 
-  export default {
-    name: 'Books',
-    components: {SearchBar, ViewSwitch},
-    data () {
-      return {
-        books: [],
-        currentPage: 1,
-        pagesize: 18
+    if (this.studentId) {
+      // 如果 studentId 存在，执行成绩查询
+      this.fetchGrades();
+    } else {
+      console.error("学生学号未找到！");
+    }
+  },
+  methods: {
+    fetchGrades() {
+      if (!this.studentId) {
+        console.error("学号不能为空");
+        return;
       }
-    },
-    mounted: function () {
-      this.loadBooks()
-    },
-    methods: {
-      loadBooks () {
-        var _this = this
-        this.$axios.get('/books').then(resp => {
-          if (resp && resp.data.code === 200) {
-            _this.books = resp.data.result
+
+      // 假设使用 axios 发送请求
+      this.$axios
+        .get(`/grades/${this.studentId}`)
+        .then((response) => {
+          // 判断返回的数据是否是有效的数组
+          if (response.data && Array.isArray(response.data)) {
+            this.grades = response.data;
+          } else {
+            console.error("未查询到成绩数据");
+            this.grades = [];
           }
         })
-      },
-      handleCurrentChange: function (currentPage) {
-        this.currentPage = currentPage
-      },
-      searchResult () {
-        var _this = this
-        this.$axios
-          .get('/search?keywords=' + this.$refs.searchBar.keywords, {
-          }).then(resp => {
-          if (resp && resp.data.code === 200) {
-            _this.books = resp.data.result
-          }
-        })
-      }
+        .catch((error) => {
+          console.error("获取成绩数据失败:", error);
+        });
     }
   }
+};
 </script>
+
 <style scoped>
-
-  .cover {
-    width: 115px;
-    height: 172px;
-    margin-bottom: 7px;
-    overflow: hidden;
-    cursor: pointer;
-  }
-
-  img {
-    width: 115px;
-    height: 172px;
-    /*margin: 0 auto;*/
-  }
-
-  .title {
-    font-size: 14px;
-    text-align: left;
-  }
-
-  .author {
-    color: #333;
-    width: 102px;
-    font-size: 13px;
-    margin-bottom: 6px;
-    text-align: left;
-  }
-
-  .abstract {
-    display: block;
-    line-height: 17px;
-  }
-
-  .el-icon-delete {
-    cursor: pointer;
-    float: right;
-  }
-
-  .switch {
-    display: flex;
-    position: absolute;
-    left: 780px;
-    top: 25px;
-  }
-
-  a {
-    text-decoration: none;
-  }
-
-  a:link, a:visited, a:focus {
-    color: #3377aa;
-  }
-
+.el-button {
+  margin-bottom: 20px;
+}
 </style>
