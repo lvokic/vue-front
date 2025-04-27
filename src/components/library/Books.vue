@@ -65,7 +65,7 @@ export default {
       }
       // 假设使用 axios 发送请求
       this.$axios
-        .get(`/grades/${this.studentId}`)
+        .get(`/grades/by-student-id/${this.studentId}`)
         .then((response) => {
           // 判断返回的数据是否是有效的数组
           if (response.data && Array.isArray(response.data)) {

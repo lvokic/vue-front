@@ -4,138 +4,201 @@
       <el-breadcrumb separator-class="el-icon-arrow-right">
         <el-breadcrumb-item :to="{ path: '/admin/dashboard' }">管理中心</el-breadcrumb-item>
         <el-breadcrumb-item>内容管理</el-breadcrumb-item>
-        <el-breadcrumb-item>平均成绩</el-breadcrumb-item>
+        <el-breadcrumb-item>作业成绩统计</el-breadcrumb-item>
       </el-breadcrumb>
     </el-row>
-    <el-link href="/admin/content/editor" :underline="false" target="_blank" class="add-link">
-      <el-button type="success">写文章</el-button>
-    </el-link>
-    <el-card style="margin: 18px 2%;width: 95%">
-      <el-table :data="homeworkList" stripe style="width: 100%" :max-height="tableHeight">
-        <el-table-column type="selection" width="55">
-        </el-table-column>
-        <el-table-column type="expand">
-          <template slot-scope="props">
-            <el-form label-position="left" inline>
-              <el-form-item>
-                <span>{{ props.row.articleAbstract }}</span>
-              </el-form-item>
-            </el-form>
-          </template>
-        </el-table-column>
-        <el-table-column prop="articleTitle" label="题目（展开查看摘要）" fit>
-        </el-table-column>
-        <el-table-column prop="articleDate" label="发布日期" width="200">
-        </el-table-column>
-        <el-table-column fixed="right" label="操作" width="180">
-          <template slot-scope="scope">
-            <el-button @click.native.prevent="viewArticle(scope.row.id)" type="text" size="small">
-              查看
-            </el-button>
-            <el-button @click.native.prevent="editArticle(scope.row)" type="text" size="small">
-              编辑
-            </el-button>
-            <el-button @click.native.prevent="deleteArticle(scope.row.id)" type="text" size="small">
-              移除
-            </el-button>
-          </template>
-        </el-table-column>
-      </el-table>
-      <div style="margin: 20px 0 50px 0">
-        <el-pagination background style="float:right;" layout="total, prev, pager, next, jumper"
-          @current-change="handleCurrentChange" :page-size="pageSize" :total="total">
-        </el-pagination>
+
+    <div style="margin: 18px 0 15px 18px;">
+      <el-select v-model="selectedHomeworkName" placeholder="请选择作业" @change="handleHomeworkChange"
+        style="width: 300px;">
+        <el-option v-for="hw in homeworkList" :key="hw.name" :label="hw.name" :value="hw.name">
+        </el-option>
+      </el-select>
+    </div>
+
+    <el-card style="margin: 2px 2%; width: 95%">
+      <div v-if="selectedHomeworkName">
+        <div style="margin-bottom: 20px; font-size: 12px;">
+          当前平均成绩：<strong>{{ averageScore.toFixed(2) }}</strong> 分
+        </div>
+        <div ref="scoreChart" class="chart-container"></div>
+      </div>
+      <div v-else>
+        <p>请选择一个作业查看成绩分布。</p>
       </div>
     </el-card>
   </div>
 </template>
 
 <script>
+import * as echarts from 'echarts'
+
 export default {
-  name: 'ArticleManagement',
+  name: 'HomeworkStatistics',
   data() {
     return {
       homeworkList: [],
-      articles: [],
-      pageSize: 10,
-      total: 0
+      selectedHomeworkName: null,
+      scoreList: [],
+      averageScore: 0,
+      chartInstance: null,
+      distributionData: [
+        { name: '低于60', value: 0 },
+        { name: '60-70', value: 0 },
+        { name: '70-80', value: 0 },
+        { name: '80-90', value: 0 },
+        { name: '90-100', value: 0 }
+      ]
     }
   },
   mounted() {
-    this.loadArticles()
+    this.loadHomeworkList()
+    window.addEventListener('resize', this.handleResize)
   },
-  computed: {
-    tableHeight() {
-      return window.innerHeight - 320
+  beforeDestroy() {
+    window.removeEventListener('resize', this.handleResize)
+    if (this.chartInstance) {
+      this.chartInstance.dispose()
     }
   },
   methods: {
-    loadArticles() {
-      var _this = this
-      this.$axios.get('/article/' + this.pageSize + '/1').then(resp => {
-        if (resp && resp.data.code === 200) {
-          _this.articles = resp.data.result.content
-          _this.total = resp.data.result.totalElements
-        }
-      })
-    },
-    handleCurrentChange(page) {
-      var _this = this
-      this.$axios.get('/article/' + this.pageSize + '/' + page).then(resp => {
-        if (resp && resp.data.code === 200) {
-          _this.articles = resp.data.result.content
-          _this.total = resp.data.result.totalElements
-        }
-      })
-    },
-    viewArticle(id) {
-      let articleUrl = this.$router.resolve(
-        {
-          path: '../../jotter/article',
-          query: {
-            id: id
+    loadHomeworkList() {
+      this.$axios
+        .get(`/homework`)
+        .then((response) => {
+          if (response.data && Array.isArray(response.data)) {
+            this.homeworkList = response.data;
           }
-        }
-      )
-      window.open(articleUrl.href, '_blank')
-    },
-    editArticle(article) {
-      this.$router.push(
-        {
-          name: 'Editor',
-          params: {
-            article: article
-          }
-        }
-      )
-    },
-    deleteArticle(id) {
-      this.$confirm('此操作将永久删除该文章, 是否继续?', '提示', {
-        confirmButtonText: '确定',
-        cancelButtonText: '取消',
-        type: 'warning'
-      }).then(() => {
-        this.$axios
-          .delete('/admin/content/article/' + id).then(resp => {
-            if (resp && resp.data.code === 200) {
-              this.loadArticles()
-            }
-          })
-      }
-      ).catch(() => {
-        this.$message({
-          type: 'info',
-          message: '已取消删除'
         })
-      })
+        .catch((error) => {
+          console.error("获取作业列表失败:", error);
+        });
+    },
+    handleHomeworkChange() {
+      this.$axios
+        .get(`/grades/by-course-name/${this.selectedHomeworkName}`)
+        .then(resp => {
+          if (resp.data && Array.isArray(resp.data)) {
+            this.scoreList = resp.data
+            this.calculateAverage()
+            this.calculateDistribution()
+            this.initChart()
+            this.updateChart()
+          }
+        }).catch((error) => {
+          console.error("查询成绩失败:", error);
+        })
+    },
+    calculateAverage() {
+      if (this.scoreList.length > 0) {
+        const total = this.scoreList.reduce((sum, item) => sum + item.score, 0);
+        this.averageScore = total / this.scoreList.length;
+      } else {
+        this.averageScore = 0;
+      }
+    },
+    calculateDistribution() {
+      // Reset distribution data
+      this.distributionData = [
+        { name: '低于60', value: 0 },
+        { name: '60-70', value: 0 },
+        { name: '70-80', value: 0 },
+        { name: '80-90', value: 0 },
+        { name: '90-100', value: 0 }
+      ];
+
+      // Classify scores into the defined ranges
+      this.scoreList.forEach(item => {
+        const score = item.score;
+        if (score < 60) {
+          this.distributionData[0].value++;
+        } else if (score >= 60 && score < 70) {
+          this.distributionData[1].value++;
+        } else if (score >= 70 && score < 80) {
+          this.distributionData[2].value++;
+        } else if (score >= 80 && score < 90) {
+          this.distributionData[3].value++;
+        } else if (score >= 90 && score <= 100) {
+          this.distributionData[4].value++;
+        }
+      });
+    },
+    initChart() {
+      const chartDom = this.$refs.scoreChart;
+      if (chartDom) {
+        this.chartInstance = echarts.init(chartDom);
+        this.chartInstance.on('click', this.handleChartClick); // Add click event listener
+      }
+    },
+    updateChart() {
+      if (!this.chartInstance) return;
+
+      const option = {
+        backgroundColor: '#2c343c',
+        title: {
+          text: '作业成绩分布',
+          left: 'center',
+          textStyle: {
+            color: '#ccc'
+          }
+        },
+        tooltip: {
+          trigger: 'item',
+          formatter: (params) => {
+            return `${params.name}: ${params.value} 人`;
+          }
+        },
+        series: [
+          {
+            name: '成绩分布',
+            type: 'pie',
+            radius: '55%',
+            center: ['50%', '50%'],
+            data: this.distributionData,
+            label: {
+              color: 'rgba(255, 255, 255, 0.3)'
+            },
+            labelLine: {
+              lineStyle: {
+                color: 'rgba(255, 255, 255, 0.3)'
+              },
+              smooth: 0.2,
+              length: 10,
+              length2: 20
+            },
+            itemStyle: {
+              color: '#c23531',
+              shadowBlur: 200,
+              shadowColor: 'rgba(0, 0, 0, 0.5)'
+            },
+            animationType: 'scale',
+            animationEasing: 'elasticOut',
+            animationDelay: function (idx) {
+              return Math.random() * 200;
+            }
+          }
+        ]
+      };
+
+      this.chartInstance.setOption(option);
+    },
+    handleChartClick(params) {
+      // Handle the click event to display information about the clicked segment
+      const { name, value } = params;
+      alert(`${name} 区间有 ${value} 人`);
+    },
+    handleResize() {
+      if (this.chartInstance) {
+        this.chartInstance.resize()
+      }
     }
   }
 }
 </script>
 
 <style scoped>
-.add-link {
-  margin: 18px 0 15px 10px;
-  float: left;
+.chart-container {
+  width: 100%;
+  height: 100vh; /* Full viewport height */
 }
 </style>

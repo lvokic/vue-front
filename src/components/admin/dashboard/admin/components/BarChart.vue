@@ -1,5 +1,5 @@
 <template>
-  <div :class="className" :style="{height:height,width:width}" />
+  <div :class="className" :style="{ height: height, width: width }" />
 </template>
 
 <script>
@@ -25,17 +25,18 @@ export default {
       default: '300px'
     }
   },
-  data () {
+  data() {
     return {
       chart: null
     }
   },
-  mounted () {
+  mounted() {
+    console.log(this.$el);
     this.$nextTick(() => {
-      initChart()
-    })
+      this.initChart();
+    });
   },
-  beforeDestroy () {
+  beforeDestroy() {
     if (!this.chart) {
       return
     }
@@ -43,8 +44,10 @@ export default {
     this.chart = null
   },
   methods: {
-    initChart () {
+    initChart() {
+      console.log("initiating")
       this.chart = echarts.init(this.$el, 'macarons')
+      console.log("init success");
 
       this.chart.setOption({
         tooltip: {
