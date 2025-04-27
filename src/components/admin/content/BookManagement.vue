@@ -21,21 +21,20 @@
             </el-form>
           </template>
         </el-table-column>
-        <el-table-column prop="name" label="作业名" fit>
+        <el-table-column prop="name" label="作业名" width="500">
         </el-table-column>
-        <el-table-column prop="category" label="分类" width="1000">
+        <el-table-column prop="category" label="分类" width="500">
         </el-table-column>
         <el-table-column fixed="right" label="操作" width="200">
           <template slot-scope="scope">
-            <el-button @click.native.prevent="editBook(scope.row)" type="text" size="small">
-              编辑
-            </el-button>
-            <el-button @click.native.prevent="deleteBook(scope.row.id)" type="text" size="small">
+            <el-button @click.native.prevent="deleteHomework(scope.row.name)" type="text" size="small">
               移除
             </el-button>
-            <el-button @click.native.prevent="uploadTemplate(scope.row)" type="text" size="small">
-              上传模版
-            </el-button>
+            <template v-if="scope.row.category === '客观题' || scope.row.category === '半开放'">
+              <el-button @click.native.prevent="triggerFileUpload(scope.row)" type="text" size="small">
+                上传模版
+              </el-button>
+            </template>
           </template>
         </el-table-column>
       </el-table>
@@ -49,7 +48,6 @@
 
 <script>
 import EditForm from './EditForm'
-import { ElMessageBox } from 'element-ui';
 
 export default {
   name: 'BookManagement',
@@ -81,80 +79,82 @@ export default {
           console.error("获取作业列表失败:", error);
         });
     },
-    deleteBook(id) {
+    deleteHomework(name) {
       this.$confirm('此操作将永久删除该书籍, 是否继续?', '提示', {
         confirmButtonText: '确定',
         cancelButtonText: '取消',
         type: 'warning'
       }).then(() => {
         this.$axios
-          .post('/admin/content/books/delete', { id: id }).then(resp => {
+          .delete(`/homework/delete/${encodeURIComponent(name)}`)
+          .then(resp => {
             if (resp && resp.data.code === 200) {
-              this.loadBooks()
+              this.fetchHomework();
+              this.$message.success('删除成功～！');
             }
           })
-      }).catch(() => {
-        this.$message({
-          type: 'info',
-          message: '已取消删除'
+      })
+        .catch(() => {
+          this.$message({
+            type: 'info',
+            message: '已取消删除'
+          })
         })
-      })
     },
-    editBook(item) {
-      this.$refs.edit.dialogFormVisible = true
-      this.$refs.edit.form = {
-        id: item.id,
-        cover: item.cover,
-        title: item.title,
-        author: item.author,
-        date: item.date,
-        press: item.press,
-        abs: item.abs,
-        category: {
-          id: item.category.id.toString(),
-          name: item.category.name
-        }
-      }
-    },
-    loadBooks() {
-      var _this = this
-      this.$axios.get('/books').then(resp => {
-        if (resp && resp.data.code === 200) {
-          _this.books = resp.data.result
-        }
-      })
-    },
-    uploadTemplate(row) {
-      ElMessageBox.prompt('请选择模板文件进行上传', '上传模版', {
-        confirmButtonText: '上传',
-        cancelButtonText: '取消',
-        inputType: 'file',
-        inputPlaceholder: '选择文件'
-      }).then(({ value }) => {
-        if (value) {
-          const formData = new FormData();
-          formData.append('file', value);
-          formData.append('homeworkId', row.id); // 把作业ID传给后台
+    triggerFileUpload(row) {
+      // 创建一个隐藏的文件输入框
+      const self = this;
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.doc,.docx,.pdf,.xlsx,.txt'; // 设置接受文件的类型
+      input.style.display = 'none';  // 不显示文件输入框
 
-          this.$axios.post('/upload-template', formData)
+      // 使用 bind 明确绑定 `this`，确保可以访问 Vue 组件的方法
+      input.onchange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          // 检查文件类型
+          const validTypes = ['.doc', '.docx', '.pdf', '.xlsx', '.txt'];
+          const fileType = file.name.split('.').pop().toLowerCase();
+          if (!validTypes.includes(`.${fileType}`)) {
+            self.$message.error('无效的文件类型，支持的格式有：.doc, .docx, .pdf, .xlsx, .txt');
+            return;
+          }
+
+          // 上传文件
+          const formData = new FormData();
+          formData.append('file', file);
+          formData.append('homeworkName', row.name);
+          var category = row.category;
+          var path;
+          if (category === "客观题") {
+            path = "/upload/template/objective";
+          } else {
+            path = "/upload/template/subjective";
+          }
+          console.log(path);
+
+          self.$flaskAxios
+            .post(path, formData)
             .then(response => {
-              if (response.data.code === 200) {
-                this.$message.success('上传成功');
+              console.log(response);
+              if (response.status === 200) {
+                self.$message.success('上传成功');
               } else {
-                this.$message.error('上传失败');
+                self.$message.error('上传失败');
               }
             })
             .catch(error => {
-              this.$message.error('上传失败');
+              self.$message.error('上传失败');
               console.error(error);
             });
         }
-      }).catch(() => {
-        this.$message({
-          type: 'info',
-          message: '已取消上传'
-        });
-      });
+      };
+
+      // 触发文件选择框
+      document.body.appendChild(input);  // 添加到页面中，避免无法点击
+      input.click();  // 触发点击事件
+      document.body.removeChild(input); // 上传完成后移除该元素
     }
   }
 }

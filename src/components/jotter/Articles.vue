@@ -13,11 +13,11 @@
 
       <!-- 右侧表格展示 -->
       <el-col :span="18" class="table-container">
-        <el-table :data="homeworkList" style="width: 100%">
-          <el-table-column label="作业ID" prop="id"></el-table-column>
-          <el-table-column label="作业名称" prop="name"></el-table-column>
-          <el-table-column label="作业类型" prop="category"></el-table-column>
-          <el-table-column label="操作" width="180">
+        <el-table :data="homeworkList" style="width: 100%" border>
+          <el-table-column label="作业ID" prop="id" width="180"></el-table-column>
+          <el-table-column label="作业名称" prop="name" width="280"></el-table-column>
+          <el-table-column label="作业类型" prop="category" width="200"></el-table-column>
+          <el-table-column label="操作" width="280">
             <template slot-scope="scope">
               <el-button size="small" @click="triggerFileInput(scope.row)" type="primary">
                 提交
@@ -54,7 +54,6 @@
     </el-dialog>
   </div>
 </template>
-
 <script>
 export default {
   name: "Article",

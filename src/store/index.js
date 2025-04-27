@@ -5,6 +5,7 @@ Vue.use(Vuex)
 
 export default new Vuex.Store({
   state: {
+    userId: window.localStorage.getItem('userId') == null ? '' : JSON.parse(window.localStorage.getItem('userId' || '[]')),
     username: window.localStorage.getItem('username') == null ? '' : JSON.parse(window.localStorage.getItem('username' || '[]')),
     adminMenus: [],
     studentId: window.localStorage.getItem('studentId') == null ? '' : JSON.parse(window.localStorage.getItem('studentId' || '[]'))
@@ -19,14 +20,18 @@ export default new Vuex.Store({
       state.adminMenus = menus
     },
     login (state, data) {
-      state.username = data
-      window.localStorage.setItem('username', JSON.stringify(data))
+      state.username = data.username;
+      state.userId = data.userId;
+      window.localStorage.setItem('username', JSON.stringify(data.username));
+      window.localStorage.setItem('userId', JSON.stringify(data.userId));
     },
     logout (state) {
       // 注意不能用 null 清除，否则将无法判断 user 里具体的内容
-      state.username = ''
-      window.localStorage.removeItem('username')
-      state.adminMenus = []
+      state.username = '';
+      window.localStorage.removeItem('username');
+      state.userId = '';
+      window.localStorage.removeItem('userId');
+      state.adminMenus = [];
       state.studentId = '';  // 清除 studentId
       window.localStorage.removeItem('studentId'); // 从 localStorage 中移除 studentId
     }

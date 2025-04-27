@@ -32,7 +32,7 @@ export default {
   },
   mounted () {
     this.$nextTick(() => {
-      this.initChart()
+      initChart()
     })
   },
   beforeDestroy () {

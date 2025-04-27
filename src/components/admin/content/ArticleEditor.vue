@@ -37,7 +37,7 @@
         <el-divider content-position="left">封面</el-divider>
         <div style="margin-top: 20px">
           <el-input v-model="article.articleCover" autocomplete="off" placeholder="图片 URL"></el-input>
-          <img-upload @onUpload="uploadImg" ref="imgUpload" style="margin-top: 5px"></img-upload>
+          <img-upload @onUpload="uploadImg" ref="FileUpload" style="margin-top: 5px"></img-upload>
         </div>
         <span slot="footer" class="dialog-footer">
           <el-button @click="dialogVisible = false">取 消</el-button>
@@ -49,11 +49,11 @@
 </template>
 
 <script>
-  import ImgUpload from './ImgUpload'
+  import FileUpload from './FileUpload'
 
   export default {
     name: 'Editor',
-    components: {ImgUpload},
+    components: {FileUpload},
     data () {
       return {
         article: {},

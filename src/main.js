@@ -142,32 +142,32 @@ Vue.config.productionTip = false
 Vue.use(mavonEditor)
 
 router.beforeEach((to, from, next) => {
-    if (store.state.username && to.path.startsWith('/admin')) {
-      initAdminMenu(router, store)
-    }
-    if (store.state.username && to.path.startsWith('/login')) {
+  if (store.state.username && to.path.startsWith('/admin')) {
+    initAdminMenu(router, store)
+  }
+  if (store.state.username && to.path.startsWith('/login')) {
+    next({
+      name: 'Dashboard'
+    })
+  }
+  // 如果前端没有登录信息则直接拦截，如果有则判断后端是否正常登录（防止构造参数绕过）
+  if (to.meta.requireAuth) {
+    if (store.state.username) {
+      axios.get('/authentication').then(resp => {
+        if (resp) {
+          next()
+        }
+      })
+    } else {
       next({
-        name: 'Dashboard'
+        path: 'login',
+        query: {redirect: to.fullPath}
       })
     }
-    // 如果前端没有登录信息则直接拦截，如果有则判断后端是否正常登录（防止构造参数绕过）
-    if (to.meta.requireAuth) {
-      if (store.state.username) {
-        axios.get('/authentication').then(resp => {
-          if (resp) {
-            next()
-          }
-        })
-      } else {
-        next({
-          path: 'login',
-          query: {redirect: to.fullPath}
-        })
-      }
-    } else {
-      next()
-    }
+  } else {
+    next()
   }
+}
 )
 
 // http response 拦截器
@@ -191,32 +191,42 @@ const initAdminMenu = (router, store) => {
   }
   axios.get('/menu').then(resp => {
     if (resp && resp.status === 200) {
-      var fmtRoutes = formatRoutes(resp.data.result)
-      router.addRoutes(fmtRoutes)
-      store.commit('initAdminMenu', fmtRoutes)
+      var fmtRoutes = formatRoutes(resp.data.result);
+      fmtRoutes.forEach(route => {
+        // 检查路由是否已存在
+        const exists = router.options.routes.some(existingRoute => existingRoute.name === route.name);
+        if (!exists) {
+          router.addRoute(route);  // 如果路由不存在，则添加
+        }
+      });
+      store.commit('initAdminMenu', fmtRoutes);
     }
   })
 }
 
 const formatRoutes = (routes) => {
+  if (!Array.isArray(routes)) {
+    console.error('Expected routes to be an array, but got:', routes);
+    return []; // 如果 routes 不是一个有效数组，返回空数组
+  }
+
   let fmtRoutes = []
   routes.forEach(route => {
-    if (route.children) {
+    // 检查 route.children 是否为数组
+    if (Array.isArray(route.children)) {
       route.children = formatRoutes(route.children)
     }
 
     let fmtRoute = {
       path: route.path,
-      component: resolve => {
-        require(['./components/admin/' + route.component + '.vue'], resolve)
-      },
+      component: () => import(`./components/admin/${route.component}.vue`), // 使用 import 动态导入
       name: route.name,
       nameZh: route.nameZh,
       iconCls: route.iconCls,
       meta: {
         requireAuth: true
       },
-      children: route.children
+      children: route.children || []  // 如果没有 children，给一个空数组
     }
     fmtRoutes.push(fmtRoute)
   })
@@ -229,6 +239,6 @@ new Vue({
   render: h => h(App),
   router,
   store,
-  components: {App},
+  components: { App },
   template: '<App/>'
 })
